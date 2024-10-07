@@ -2,11 +2,12 @@
 # -*- coding: utf8 -*-
 
 from subprocess import Popen, PIPE, STDOUT
-from multiprocessing import Process as Thread, Event
+from multiprocessing import Process
 import sys, os
 import atexit
 import os
 import readline
+from select import select
 from time import sleep
 
 ### interactive session with history with readline
@@ -22,30 +23,31 @@ except FileNotFoundError:
 atexit.register(readline.write_history_file, histfile)
 
 ### opening wish
-gs = Popen(['wish'], 
+wish = Popen(['wish'], 
         stdin=PIPE,
         stdout=PIPE,
         stderr=PIPE,
         bufsize=-1,
         )
 
-os.set_blocking(gs.stdout.fileno(), False)
-os.set_blocking(gs.stderr.fileno(), False)
-os.set_blocking(gs.stdin.fileno(), False)
+os.set_blocking(wish.stdout.fileno(), False)
+os.set_blocking(wish.stderr.fileno(), False)
+os.set_blocking(wish.stdin.fileno(), False)
 
 def puts(s):
     out = f"""set code [ catch {{ {s} }} p ]
 if {{$code}} {{ error $p }}
 """
-    gs.stdin.write(out.encode())
-    gs.stdin.flush()
-    gs.stdin.write(( "flush stdout\n").encode())
+    select([], [wish.stdin], [])
+    wish.stdin.write(out.encode())
+    wish.stdin.flush()
+    wish.stdin.write(( "flush stdout\n").encode())
     sleep(.1)
 
 def gets():
     while True:
-        gs.stdout.flush()
-        tin = gs.stdout.read()
+        wish.stdout.flush()
+        tin = wish.stdout.read()
         if tin:
             print("\ntcl output> " + tin.decode())
         sleep(.1)
@@ -64,14 +66,14 @@ def load(fn="temp"):
 
 
 # async io in tcl requires a background process to read the input
-t =Thread(target=gets, args=())
+t =Process(target=gets, arwish=())
 t.start()
 
 while True:
     s = input("# ")
     if s in { "bye", "quit", "exit" }:
         t.terminate()
-        gs.stdin.write("destroy .".encode())
+        wish.stdin.write("destroy .".encode())
         break
     elif s == "#l":
         print(session)
@@ -89,7 +91,7 @@ bye exit quit quit the current session
         continue
     else:
         puts(s)
-        if err:=gs.stderr.readline():
+        if err:=wish.stderr.readline():
             sys.stderr.write(err.decode())
         else:
             if s and not s.startswith("#"):
