@@ -6,7 +6,7 @@
 
 # iwish interactive wish (tcl/tk interpreter)
 
-iwish is a script that gives interactive features to wish like navigating with
+iwish is a script that gives interactive features to wish (the tcl/tk interpreter) like navigating with
 arrows backward search ... history files (all that readline can offer).
 
 Due to my limitations, however, input are line based and eval in tcl before being
